@@ -10,6 +10,7 @@ import {
   InvalidUsernameOrPassword,
   DuplicatedUsername,
   InvalidPassword,
+  UserAndRole,
 } from '../types/user'
 import {BaseResponse} from '../types/application'
 import {
@@ -111,11 +112,39 @@ export default class AuthManagerClass implements AuthManager {
     }
   }
 
-  async list(): BaseResponse<User[]> {
+  async list(): BaseResponse<UserAndRole[]> {
     try {
       const users = await this.authRepo.list()
-      const usernames = users.map(({username}) => ({username}))
+      const usernames = users.map(({username, isAdmin}) => ({
+        username,
+        isAdmin,
+      }))
       return [usernames, null]
+    } catch (error) {
+      return [null, error]
+    }
+  }
+
+  async setAdministratorPermits(
+    {username}: User,
+    status = false
+  ): BaseResponse<boolean> {
+    try {
+      const userAuth = await this.authRepo.read({username})
+      userAuth.isAdmin = status
+
+      const saved = await this.authRepo.update(userAuth)
+
+      return [saved, null]
+    } catch (error) {
+      return [null, error]
+    }
+  }
+
+  async isAdmin(user: User): BaseResponse<boolean> {
+    try {
+      const userAuth = await this.authRepo.read(user)
+      return [userAuth.isAdmin === true, null]
     } catch (error) {
       return [null, error]
     }
